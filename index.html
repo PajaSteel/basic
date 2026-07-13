@@ -68,7 +68,7 @@ button:hover{background:#12320f} button:disabled{opacity:.45;cursor:not-allowed}
 <div class="card hidden" id="runbox">
   <h2>READY.</h2>
   <div class="lesson-note">Program je správně sestaven. Zadej poslední příkaz.</div>
-  <input id="run" placeholder="RUN">
+  <input id="run" placeholder="***">
   <button id="runButton" onclick="runProgram()">EXECUTE</button>
   <div id="rf"></div>
   <div class="rebuild hidden" id="rebuild">
@@ -79,7 +79,7 @@ button:hover{background:#12320f} button:disabled{opacity:.45;cursor:not-allowed}
   <div class="final hidden" id="out"></div>
 </div>
 
-<div class="small">BASIC CACHE RECOVERY SYSTEM — FINAL PLAYER BUILD v4.1</div>
+<div class="small">BASIC CACHE RECOVERY SYSTEM — PLAYER BUILD v4.1</div>
 </div>
 
 <script>
@@ -252,7 +252,7 @@ function runProgram(){
   const blocks=[...document.querySelectorAll(".memblock")];
   const total=blocks.length;
 
-  // Začátek: bloky jsou záměrně rozházené po celé mapě.
+  // Začátek: rozházení bloku 
   const occupied=new Set();
   while(occupied.size<62) occupied.add(Math.floor(Math.random()*total));
   occupied.forEach(i=>blocks[i].classList.add("active"));
@@ -265,7 +265,7 @@ function runProgram(){
     step++;
     const pct=Math.min(100,step);
 
-    // Postupně zhasni rozházené bloky a rozsvěcuj souvislou oblast zleva.
+    // Postupné zhasínání a rosvěcení bloků
     const desired=Math.floor(targetCount*pct/100);
     blocks.forEach((b,i)=>{
       b.classList.remove("moving");
@@ -309,7 +309,7 @@ function runProgram(){
       },900);
     }
  // časový interval posunu bloků.    
-  },400);
+  },500);
 }
 
 renderLessons();
