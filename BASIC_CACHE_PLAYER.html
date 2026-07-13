@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BASIC CACHE RECOVERY SYSTEM</title>
+<style>
+:root{--bg:#020602;--panel:#071006;--green:#72ff63;--dim:#2e7b28;--warn:#ffe66d;--bad:#ff6b6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--green);font-family:"Courier New",Consolas,monospace}
+.screen{width:min(1100px,96vw);margin:18px auto;background:#071006;border:2px solid var(--dim);padding:20px;min-height:95vh}
+.card{border:1px solid var(--dim);padding:16px;margin:16px 0;background:#030803}
+h1,h2{margin-top:0}.muted{color:#9edb97}.hidden{display:none}.ok{color:var(--green)}.bad{color:var(--bad)}
+input,textarea{width:100%;background:#010401;color:var(--green);border:1px solid var(--dim);padding:10px;font:inherit}
+textarea{min-height:220px}button{background:#0c1d0a;color:var(--green);border:1px solid var(--green);padding:10px 14px;font:inherit;cursor:pointer;margin-top:8px}
+pre{white-space:pre-wrap;background:#010401;border-left:3px solid var(--dim);padding:12px}.frag{border:1px dashed var(--dim);padding:8px;margin:6px 0}
+</style>
+</head>
+<body>
+<div class="screen">
+<h1>BASIC CACHE RECOVERY SYSTEM</h1>
+<div class="muted">TRAINING MODULE / PROGRAM REPAIR TERMINAL</div>
+
+<div class="card">
+<h2>LESSON 01 — LET</h2>
+<p>LET uloží hodnotu do proměnné.</p>
+<pre>10 LET A = 5
+20 LET A = A + 3
+30 PRINT A
+
+Výsledek: 8</pre>
+<pre>10 LET A = 7
+20 LET A = A + 5
+30 LET A = A * 2
+40 PRINT A</pre>
+<input id="a1"><button onclick="check(1)">VERIFY</button><div id="f1"></div>
+</div>
+
+<div class="card hidden" id="l2">
+<h2>LESSON 02 — IF ... THEN</h2>
+<p>IF ověří podmínku. Pokud platí, provede se část za THEN.</p>
+<pre>10 LET X = 4
+20 LET B = 2
+30 IF X &lt; 10 THEN LET B = B + 11
+40 PRINT B</pre>
+<input id="a2"><button onclick="check(2)">VERIFY</button><div id="f2"></div>
+</div>
+
+<div class="card hidden" id="l3">
+<h2>LESSON 03 — FOR ... NEXT</h2>
+<p>FOR ... NEXT opakuje blok příkazů.</p>
+<pre>10 LET C = 2
+20 FOR I = 1 TO 4
+30 LET C = C + 3
+40 NEXT I
+50 PRINT C</pre>
+<input id="a3"><button onclick="check(3)">VERIFY</button><div id="f3"></div>
+</div>
+
+<div class="card hidden" id="l4">
+<h2>LESSON 04 — GOTO</h2>
+<p>GOTO skočí na zadané číslo řádku.</p>
+<pre>10 LET D = 5
+20 GOTO 50
+30 LET D = D * 9
+40 PRINT D
+50 LET D = D + 8
+60 PRINT D</pre>
+<input id="a4"><button onclick="check(4)">VERIFY</button><div id="f4"></div>
+</div>
+
+<div class="card hidden" id="l5">
+<h2>LESSON 05 — DATA / READ</h2>
+<p>DATA obsahuje hodnoty, READ je načítá.</p>
+<pre>10 DATA 8,3,6
+20 READ X,Y,Z
+30 LET E = X * Y - Z
+40 PRINT E</pre>
+<input id="a5"><button onclick="check(5)">VERIFY</button><div id="f5"></div>
+</div>
+
+<div class="card hidden" id="l6">
+<h2>LESSON 06 — GOSUB / RETURN</h2>
+<p>GOSUB skočí do podprogramu a RETURN se vrátí zpět.</p>
+<pre>10 LET F = 4
+20 GOSUB 100
+30 LET F = F + 1
+40 PRINT F
+50 END
+
+100 LET F = F * 3
+110 RETURN</pre>
+<input id="a6"><button onclick="check(6)">VERIFY</button><div id="f6"></div>
+</div>
+
+<div class="card hidden" id="recovery">
+<h2>PROGRAM RECOVERY MODE</h2>
+<p>Seřaď fragmenty podle čísel řádků od nejnižšího k nejvyššímu.</p>
+<div id="frags"></div>
+<textarea id="editor" placeholder="Sem vlož správně seřazený program..."></textarea>
+<button onclick="verifyProgram()">VERIFY PROGRAM</button>
+<div id="pf"></div>
+</div>
+
+<div class="card hidden" id="runbox">
+<h2>READY.</h2>
+<input id="run" placeholder="Zadej RUN">
+<button onclick="runProgram()">EXECUTE</button>
+<pre id="out"></pre>
+</div>
+</div>
+
+<script>
+const K=157;
+const AK=198;
+const PK=18;
+const EA=["244.227","246.235","249.237","248.233","251.227","250.239"];
+const EC=["35.19.20.9.19.51.88.200.186.150.156.250","33.20.21.10.18.60.89.200.187.145.157.143.255.218.33.33","39.21.22.1.23.59.90.194.188.144.158.254.192.165.77.51.16","33.22.23.4.28.62.91.206.189.147.159.146.193.217.35.93","35.23.24.7.31.51.40.173.215","33.24.25.3.29.76.63.174.161.144.243.226.195.160.77.83.105.24.14.21.63.51.173.167.159","47.25.26.7.25.57.94.205.128.140.226.227","33.26.27.11.18.58.48.176.144.130.243","35.27.28.10.17.60.213.211.130.129.244.229","42.28.13.110.27.49.213.211.131.129.233.238.203.201.58","45.28.14.111.50.52.195.215.132.237.234.142.196.163","44.28.15.112.45.55.215.180.230.150.250.248.177.218.32.60.116.30.100.64.43","47.28.112.113.39.61.192","45.0.113.114.47.49.209.182.229.152.244.250.169.220.38.62.25","18.0.114.115.54.48.210.194.250.247"];
+const EF=["127.111.64.161.214.226.224.132.246.210.212.49.54.26.15","124.80.81.196.220.246.149.143.247.213.217.59.59.120.114.110.107","98.81.66.163.216.224.226.231.154.201.199.43.94.13.21.111.86","96.82.83.200.208.242.151.137.249.215.219.59","101.83.84.201.211.243.152.139.250.214.220.61","98.85.69.166.197.237.248.142.251.180.209.87.51.106","97.85.86.201.221.241.238.235.149","103.86.87.196.220.254.155.142.253.211.223.81.1.24.99.103","111.87.88.206.213.248.233.143.254.221.48.33","102.91.73.170.222.226.249","105.91.74.171.208.232.234.239.163.209.63.51.124.21.109.119.49.89.161.187.246","109.90.91.192.216.250.159.146.193.207.35.86.5.29.103.17","104.90.76.173.204.234.148.132.176.189","109.92.93.199.217.144.131.242.221.212.55.38.7.108.1.31.37.92.202.209.251.143.241.219.195","100.93.94.200.239.229.141.243.213.197.54"];
+const FINAL="219.231.241.145.173.210.64.91.106.100.3.17.39.59.223.217.254.132.197.174.209.54.42.4.6.126.121.94.78.190.145.233.157.254.238.195.33.33.19.26.125.110.95";
+let solved=0;
+
+function dec(s,key){
+  return new TextDecoder().decode(new Uint8Array(s.split(".").map((x,i)=>(parseInt(x,10)^((key+i*17)&255)))));
+}
+function check(n){
+  const v=document.getElementById("a"+n).value.trim();
+  const expected=dec(EA[n-1],AK+n-1);
+  const f=document.getElementById("f"+n);
+  if(v===expected){
+    f.className="ok"; f.textContent="BLOCK 0"+n+" RECOVERED — OK";
+    if(n<6) document.getElementById("l"+(n+1)).classList.remove("hidden");
+    if(n===6){document.getElementById("recovery").classList.remove("hidden");renderFragments();}
+  }else{f.className="bad";f.textContent="LOGIC ERROR";}
+}
+function renderFragments(){
+  const b=document.getElementById("frags");
+  b.innerHTML="";
+  EF.forEach((x,i)=>{const d=document.createElement("div");d.className="frag";d.textContent=dec(x,PK+60+i);b.appendChild(d);});
+}
+function norm(t){return t.split(/\r?\n/).map(x=>x.trim().replace(/\s+/g," ")).filter(Boolean);}
+function verifyProgram(){
+  const got=norm(document.getElementById("editor").value);
+  const expected=EC.map((x,i)=>dec(x,PK+i));
+  const ok=got.length===expected.length && got.every((x,i)=>x.toUpperCase()===expected[i].toUpperCase());
+  const f=document.getElementById("pf");
+  if(ok){f.className="ok";f.textContent="PROGRAM STRUCTURE VALID";document.getElementById("runbox").classList.remove("hidden");}
+  else{f.className="bad";f.textContent="PROGRAM ORDER ERROR";}
+}
+function runProgram(){
+  const c=document.getElementById("run").value.trim().toUpperCase();
+  if(c!=="RUN"){document.getElementById("out").textContent="?SYNTAX ERROR";return;}
+  document.getElementById("out").textContent="READY.\nRUN\n\nEXECUTING...\n\n"+dec(FINAL,K)+"\n\nPROGRAM COMPLETE.\nREADY.";
+}
+</script>
+</body>
+</html>
