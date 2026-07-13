@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BASIC CACHE RECOVERY SYSTEM</title>
+<style>
+:root{--bg:#020502;--panel:#071007;--green:#74ff66;--dim:#2e7d28;--text:#d4ffd0;--warn:#ffe66d;--bad:#ff6868}
+*{box-sizing:border-box}
+body{margin:0;background:#010301;color:var(--green);font-family:"Courier New",Consolas,monospace}
+.screen{width:min(1120px,96vw);margin:18px auto;padding:20px;border:2px solid var(--dim);background:radial-gradient(circle at center,#0b170a 0%,#061006 75%,#020402 100%);box-shadow:0 0 30px rgba(116,255,102,.14)}
+header{border-bottom:1px solid var(--dim);padding-bottom:14px;margin-bottom:18px}
+h1{font-size:clamp(22px,4vw,36px);margin:0 0 6px}h2{font-size:20px;margin-top:0}h3{font-size:16px}
+.card{border:1px solid var(--dim);background:rgba(3,8,3,.88);padding:16px;margin:16px 0}
+.hidden{display:none}.muted{color:#9edb97}.ok{color:var(--green)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+pre{white-space:pre-wrap;background:#010401;border-left:3px solid var(--dim);padding:12px;overflow:auto;color:var(--text)}
+input,textarea{width:100%;background:#010401;color:var(--green);border:1px solid var(--dim);padding:10px;font:inherit;outline:none}
+textarea{min-height:320px;resize:vertical}
+button{background:#0c1d0a;color:var(--green);border:1px solid var(--green);padding:10px 14px;font:inherit;cursor:pointer;margin-top:8px}
+button:hover{background:#12320f} button:disabled{opacity:.45;cursor:not-allowed}
+.progress{height:16px;border:1px solid var(--dim);background:#010401;margin:12px 0}.progress>div{height:100%;width:0;background:var(--green);transition:width .3s}
+.frag{border:1px dashed var(--dim);padding:8px;margin:6px 0;background:#041004}
+.final{border:1px solid var(--green);padding:18px;background:#010401;white-space:pre-wrap;min-height:130px;font-size:18px}
+.lesson-note{line-height:1.55;color:var(--text)}.small{font-size:12px;color:#7fb979}
+.rebuild{border:1px solid var(--dim);padding:14px;margin-top:14px;background:#010401}
+.blockgrid{display:grid;grid-template-columns:repeat(24,1fr);gap:3px;margin:14px 0}
+.memblock{aspect-ratio:1/1;border:1px solid #245d21;background:#071007;box-shadow:inset 0 0 4px rgba(0,0,0,.8)}
+.memblock.active{background:var(--green);box-shadow:0 0 7px rgba(116,255,102,.65)}
+.memblock.moving{background:var(--warn);box-shadow:0 0 8px rgba(255,230,109,.75)}
+.rebuildline{min-height:22px;color:var(--text)}
+.rebuildbar{height:14px;border:1px solid var(--dim);background:#020602;margin-top:10px}
+.rebuildbar>div{height:100%;width:0;background:var(--green);transition:width .18s linear}
+</style>
+</head>
+<body>
+<div class="screen">
+<header>
+  <h1>BASIC CACHE RECOVERY SYSTEM</h1>
+  <div class="muted">TRAINING MODE / PROGRAM RECOVERY / FINAL EXECUTION</div>
+  <div id="status" class="warn">STATUS: TRAINING REQUIRED</div>
+</header>
+
+<div class="card">
+  <h2>INSTRUCTIONS</h2>
+  <div class="lesson-note">
+    Nemusíš umět programovat. Každý blok nejprve vysvětlí jeden příkaz nebo princip BASICu.
+    Potom stejný princip použiješ v krátké úloze. Po dokončení všech bloků obnovíš závěrečný program.
+  </div>
+  <div class="progress"><div id="bar"></div></div>
+  <div id="progressText">RECOVERED BLOCKS: 0 / 16</div>
+</div>
+
+<div id="lessons"></div>
+
+<div class="card hidden" id="recovery">
+  <h2>FINAL PROGRAM RECOVERY</h2>
+  <div class="lesson-note">
+    Každý řádek programu má své číslo. Tato čísla určují posloupnost, ve které BASIC jednotlivé příkazy čte a vykonává.
+    Seřaď obnovené řádky podle čísel od nejnižšího k nejvyššímu a vlož je do editoru.
+  </div>
+  <div id="frags"></div>
+  <h3>PROGRAM EDITOR</h3>
+  <textarea id="editor" spellcheck="false" placeholder="Sem vlož správně seřazený program..."></textarea>
+  <button onclick="verifyProgram()">VERIFY PROGRAM</button>
+  <div id="pf"></div>
+</div>
+
+<div class="card hidden" id="runbox">
+  <h2>READY.</h2>
+  <div class="lesson-note">Program je správně sestaven. Zadej poslední příkaz.</div>
+  <input id="run" placeholder="RUN">
+  <button id="runButton" onclick="runProgram()">EXECUTE</button>
+  <div id="rf"></div>
+  <div class="rebuild hidden" id="rebuild">
+    <div class="rebuildline" id="rebuildStatus">PROGRAM MEMORY MAP</div>
+    <div class="blockgrid" id="blockgrid"></div>
+    <div class="rebuildbar"><div id="rebuildProgress"></div></div>
+  </div>
+  <div class="final hidden" id="out"></div>
+</div>
+
+<div class="small">BASIC CACHE RECOVERY SYSTEM — FINAL PLAYER BUILD v4.1</div>
+</div>
+
+<script>
+const K=190;
+const AK=217;
+const PK=25;
+const EA=["145.70.97.27.206","238.50","232","211.63","211","217.38","210","223.43","192.35","197.39","194","185.101.13.48.231","200","66.107.7","80.100.20","55.3"];
+const EC=["40.115.77.219.132.191.53.165.46.5.66.184","41.117.79.213.134.185.55.164.48.7.68.189","46.119.81.221.138.189.57.161.50.1.70.161.154.176.252.253.50","43.121.83.209.130.165.59.171.52.3.72.211.156.205.149.150","20.123.85.209.140.171.73.204.95","21.125.87.232.141.213.94.206.38.98.93.163.224.190.241.166.67.23.38.196.230.209.236.248.49.28.102.160.10.53.240.136.215.102.4.78.11.78.161.242","18.127.89.228.130.163.110.208.35.116","31.97.91.224.129.189","16.99.93.227.144.175.100.212.44.100.70.176.240.220.135","26.101.79.137.129.184.102.178.0.18.88.199.228.168.237.188","28.102.177.139.145.182.100.216.108.100.69.137","30.107.179.141.155.68.127.218.106.102.73.139.236.203.229.183.57.104.77.206","0.104.181.143.149.70.121.220.104.120.72.141.238.197.231.171.59.110.79.206","2.105.183.145.151.64.123.222.102.122.79.143.240.199.233.189.53.118.88.187.238.180.240.192.32.21","4.106.185.147.145.66.101.32.121.112.94.149.242.222.137.180.76.0.48.222.134.213.136.175.54","6.87.187.149.147.76.103.34.96.118.189.138.152.187.131.223.114.111.92","8.84.189.151.173.78.97.36.122.124.162.145.246.76.138.191.119.105.95.242.239.182.241.199","10.93.191.153.175.72.99.38.101.126.164.147.248.79.152.191.1.103.42.135.225.170.234.197.51","12.94.161.155.183.74.106.92.125.14.195","13.89.163.157.181.84.122.78.20.14.164.227","115.90.165.159.165.86.105.44.125.64.183.148.142.40.252.33.122.117.84.137.159","113.95.167.225.162.83.31.69.24.92.172.135.213.42.141.75.104.25.161.236.154.240.129.216.16.121.70.128.42.213.144.168.55.6.36.110.43.174.138.209.60","119.92.169.227.161.82.21.48.113.68.179.152.210","117.69.171.229.168.86.23.93.28.84.166.138","123.70.173.231.189.94.17.52.117.72.175.156.173.48.244.41.125.117.180.152.251.129.244.188","121.67.175.233.163.79.14.88.20.74.192.154.211.71.197.48.126","127.64.145.235.176.81.13","124.73.147.237.187.100.31.58.6.78.165.226.174.54.207.47.13","98.74.149.239.171.102.25.73.20.62"];
+const EF=["110.188.131.253.75.116.15.10.7.90.136.239.220.4.183.94.26.58.222.132.176.131.162.81.28","82.187.149.153.70.97.125.101.118.189.138.229.222.124.184.1.126","80.189.135.193.71.112.11.14.26.162.145.246.66.10.211.3.121","92.191.153.167.76.99.32.16.104.168.154.244.52.0.195","86.161.155.169.74.109.67.115.124.187.144.238","91.163.141.199.67.126.36.112.126.216.158.141","93.165.159.160.85.29.38.22.94.170.133.235.40.102.73.110.27.95.238.156.174.153.180.0.121.68.174.232.210.141.184.80.31.46.220.54.195.150.217.58","92.165.241.203.89.122.61.24.44.164.135.201.42.9.35.117.119.170.139.140","93.172.243.205.91.4.63.26.47.174.133.194.71.22.46.15.23.171.158.254.33.251.218.102","64.172.245.207.85.6.57.28.50.180.154.217.46.116.66.119.15.161.135.138.39.254.201.15","65.173.231.189.94.17.79.124.72.175.156.213","71.169.249.211.77.21.56.14.62.180.234.204.41.105.47.14.20","70.145.251.213.77.12.50.6.76.206.236.179.56.100.33.96","74.146.253.215.115.14.33.17.60.214","76.149.239.190.108.25.56.102.73.170","76.147.225.219.105.10.45.104.60.180.245.217.58.121.51.115.79.160.146.197.36.254.70.26.110.175","75.153.243.177.98.5.91.11.84.163.232.179.60.109.53.118","176.146.229.223.123.22.46.24.57.242.143","177.158.231.33.103.16.43.110.51.130.241.214.16","180.156.233.35.97.18.213.112.52.140.252.209.2.113.59.31.79.178.227.186","182.137.235.37.99.28.215.114.41.130.240.199.4.3.84.3.85.179.150.203.53.222.62.9.79","187.132.237.39.116.21.193","186.131.239.41.127.24.211.118.204.138.233.222.100.23.111.99.38.187.224","184.135.193.69.112.7.221.120.203","190.136.211.45.115.40.198.122.202.134.235.43","163.138.213.47.117.38.217.124.205.144.231.36.126.120.12.113.42.133.228.217.111","171.141.199.84.117.33","167.141.217.51.116.33.177.43.170.138.254.57.7.124.127.29.58.231.243.186.104.162.111.106.70.171.248.210.132.167.70.122.73.212.242.216.249.192.56.7.110","165.245.219.53.120.38.199.45.172.132.214.58"];
+const FINAL="248.161.92.125.42.176.249.198.252.143.67.120.21.196.0.59.251.232.246.104.112.43.112.83.174.255.223.45.221.32.52.45.178.140.215.134.255.58.3.115.191.137.184";
+let done = Array(16).fill(false);
+
+const lessons = [
+{t:"LESSON 01 — PRINT",d:"PRINT vypíše text nebo hodnotu na obrazovku.",ex:'10 PRINT "HELLO"',q:'Co program vypíše?',code:'10 PRINT "HELLO"'},
+{t:"LESSON 02 — LET",d:"LET uloží hodnotu do proměnné. Proměnnou lze znovu přepočítat.",ex:'10 LET A = 5\n20 LET A = A + 3\n30 PRINT A\n\nVýsledek: 8',q:"Urči výslednou hodnotu A.",code:'10 LET A = 7\n20 LET A = A + 5\n30 LET A = A * 2\n40 PRINT A'},
+{t:"LESSON 03 — INPUT",d:"INPUT načte hodnotu zadanou uživatelem. V této úloze předpokládej zadanou hodnotu 7.",ex:'10 INPUT A\n20 PRINT A\n\nPři zadání 4 program vypíše 4.',q:"Jakou hodnotu vypíše program?",code:'10 INPUT A   [uživatel zadá 7]\n20 PRINT A'},
+{t:"LESSON 04 — IF ... THEN",d:"IF ověří podmínku. Pokud platí, provede se část za THEN.",ex:'10 LET A = 8\n20 LET B = 1\n30 IF A > 5 THEN LET B = 7\n40 PRINT B\n\nVýsledek: 7',q:"Urči výslednou hodnotu B.",code:'10 LET X = 4\n20 LET B = 2\n30 IF X < 10 THEN LET B = B + 11\n40 PRINT B'},
+{t:"LESSON 05 — ELSE",d:"ELSE určuje, co se provede, pokud podmínka IF neplatí.",ex:'10 LET A = 2\n20 IF A > 5 THEN LET B = 9 ELSE LET B = 3\n30 PRINT B\n\nVýsledek: 3',q:"Urči B.",code:'10 LET A = 1\n20 IF A = 5 THEN LET B = 9 ELSE LET B = 6\n30 PRINT B'},
+{t:"LESSON 06 — FOR / NEXT",d:"FOR ... NEXT opakuje příkazy. Proměnná I postupně nabývá hodnot od začátku do konce.",ex:'10 LET A = 0\n20 FOR I = 1 TO 3\n30 LET A = A + 2\n40 NEXT I\n50 PRINT A\n\nVýsledek: 6',q:"Urči C.",code:'10 LET C = 2\n20 FOR I = 1 TO 4\n30 LET C = C + 3\n40 NEXT I\n50 PRINT C'},
+{t:"LESSON 07 — STEP",d:"STEP mění velikost kroku cyklu FOR.",ex:'10 LET A = 0\n20 FOR I = 2 TO 6 STEP 2\n30 LET A = A + I\n40 NEXT I\n\nA = 2 + 4 + 6 = 12',q:"Urči A.",code:'10 LET A = 0\n20 FOR I = 1 TO 5 STEP 2\n30 LET A = A + I\n40 NEXT I\n50 PRINT A'},
+{t:"LESSON 08 — GOTO",d:"GOTO skočí na zadané číslo řádku. Přeskočené řádky se nevykonají.",ex:'10 LET D = 3\n20 GOTO 50\n30 LET D = 99\n50 LET D = D + 4\n60 PRINT D\n\nVýsledek: 7',q:"Urči D.",code:'10 LET D = 5\n20 GOTO 50\n30 LET D = D * 9\n40 PRINT D\n50 LET D = D + 8\n60 PRINT D'},
+{t:"LESSON 09 — DATA / READ",d:"DATA obsahuje připravené hodnoty. READ je načítá zleva doprava.",ex:'10 DATA 4,9,2\n20 READ A,B,C\n30 PRINT A+B+C\n\nVýsledek: 15',q:"Urči E.",code:'10 DATA 8,3,6\n20 READ X,Y,Z\n30 LET E = X * Y - Z\n40 PRINT E'},
+{t:"LESSON 10 — RESTORE",d:"RESTORE vrátí čtení DATA zpět na začátek.",ex:'10 DATA 2,7\n20 READ A\n30 RESTORE\n40 READ B\n\nA=2 a B=2',q:"Urči součet A+B+C.",code:'10 DATA 5,9\n20 READ A,B\n30 RESTORE\n40 READ C\n50 PRINT A+B+C'},
+{t:"LESSON 11 — DIM / POLE",d:"DIM vytvoří pole — několik očíslovaných míst pod jedním názvem.",ex:'10 DIM A(3)\n20 LET A(1)=2\n30 LET A(2)=4\n40 PRINT A(1)+A(2)\n\nVýsledek: 6',q:"Urči A(3).",code:'10 DIM A(3)\n20 LET A(1)=2\n30 LET A(2)=3\n40 LET A(3)=A(1)+A(2)\n50 PRINT A(3)'},
+{t:"LESSON 12 — TEXTOVÁ PROMĚNNÁ $",d:"Proměnná s $ obsahuje text.",ex:'10 LET A$ = "HELLO"\n20 PRINT A$',q:"Co je v A$?",code:'10 LET A$ = "CACHE"\n20 PRINT A$'},
+{t:"LESSON 13 — LEN",d:"LEN vrací počet znaků textu.",ex:'10 LET A$ = "BASIC"\n20 LET L = LEN(A$)\n30 PRINT L\n\nVýsledek: 5',q:"Urči L.",code:'10 LET A$ = "CACHE"\n20 LET L = LEN(A$)\n30 PRINT L'},
+{t:"LESSON 14 — LEFT$",d:"LEFT$(text,n) vezme n znaků zleva.",ex:'LEFT$("PROGRAM",3) = "PRO"',q:"Jaký text vznikne?",code:'10 LET A$ = "BASIC"\n20 LET B$ = LEFT$(A$,3)\n30 PRINT B$'},
+{t:"LESSON 15 — MID$",d:"MID$(text,start,délka) vezme část textu od zadané pozice.",ex:'MID$("PROGRAM",4,3) = "GRA"',q:"Jaký text vznikne?",code:'10 LET A$ = "BASIC"\n20 LET B$ = MID$(A$,3,3)\n30 PRINT B$'},
+{t:"LESSON 16 — GOSUB / RETURN / END",d:"GOSUB skočí do podprogramu. RETURN se vrátí zpět. END program ukončí.",ex:'10 LET F=2\n20 GOSUB 100\n30 PRINT F\n40 END\n100 LET F=F+5\n110 RETURN\n\nVýsledek: 7',q:"Urči výslednou hodnotu F.",code:'10 LET F = 4\n20 GOSUB 100\n30 LET F = F + 1\n40 PRINT F\n50 END\n100 LET F = F * 3\n110 RETURN'}
+];
+
+function dec(s,key){
+  return new TextDecoder().decode(
+    new Uint8Array(
+      s.split(".").map((x,i)=>(parseInt(x,10)^((key+i*29+(i%7)*13)&255)))
+    )
+  );
+}
+
+function esc(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function renderLessons(){
+  const root=document.getElementById("lessons");
+  lessons.forEach((L,i)=>{
+    const sec=document.createElement("section");
+    sec.className="card"+(i===0?"":" hidden");
+    sec.id="lesson"+(i+1);
+    sec.innerHTML=
+      '<h2>'+L.t+'</h2>'+
+      '<div class="lesson-note">'+L.d+'</div>'+
+      '<h3>PŘÍKLAD</h3><pre>'+esc(L.ex)+'</pre>'+
+      '<h3>BLOCK '+String(i+1).padStart(2,"0")+'</h3>'+
+      '<div class="lesson-note">'+L.q+'</div>'+
+      '<pre>'+esc(L.code)+'</pre>'+
+      '<input id="a'+(i+1)+'" autocomplete="off">'+
+      '<button id="b'+(i+1)+'" onclick="check('+(i+1)+')">VERIFY BLOCK</button>'+
+      '<div id="f'+(i+1)+'"></div>';
+    root.appendChild(sec);
+  });
+}
+
+function check(n){
+  const v=document.getElementById("a"+n).value.trim().toUpperCase();
+  const expected=dec(EA[n-1],AK+(n-1)*3).trim().toUpperCase();
+  const f=document.getElementById("f"+n);
+
+  if(v===expected){
+    done[n-1]=true;
+    f.className="ok";
+    f.textContent="BLOCK "+String(n).padStart(2,"0")+" RECOVERED — OK";
+    document.getElementById("a"+n).disabled=true;
+    document.getElementById("b"+n).disabled=true;
+    updateProgress();
+
+    if(n<16){
+      document.getElementById("lesson"+(n+1)).classList.remove("hidden");
+    }
+
+    if(done.every(Boolean)){
+      document.getElementById("recovery").classList.remove("hidden");
+      document.getElementById("status").textContent="STATUS: FINAL PROGRAM RECOVERY";
+      renderFragments();
+      document.getElementById("recovery").scrollIntoView({behavior:"smooth"});
+    }
+  }else{
+    f.className="bad";
+    f.textContent="LOGIC ERROR — TRY AGAIN";
+  }
+}
+
+function updateProgress(){
+  const c=done.filter(Boolean).length;
+  document.getElementById("bar").style.width=(c/16*100)+"%";
+  document.getElementById("progressText").textContent="RECOVERED BLOCKS: "+c+" / 16";
+}
+
+function renderFragments(){
+  const box=document.getElementById("frags");
+  box.innerHTML="";
+  EF.forEach((x,i)=>{
+    const d=document.createElement("div");
+    d.className="frag";
+    d.textContent=dec(x,PK+70+i*2);
+    box.appendChild(d);
+  });
+}
+
+function norm(t){
+  return t
+    .split(/\r?\n/)
+    .map(x=>x.trim().replace(/\s+/g," "))
+    .filter(Boolean);
+}
+
+function verifyProgram(){
+  const got=norm(document.getElementById("editor").value);
+  const exp=EC.map((x,i)=>dec(x,PK+i*2));
+  const ok=got.length===exp.length && got.every((x,i)=>x.toUpperCase()===exp[i].toUpperCase());
+  const f=document.getElementById("pf");
+
+  if(ok){
+    f.className="ok";
+    f.textContent="PROGRAM STRUCTURE VALID — READY TO RUN";
+    document.getElementById("runbox").classList.remove("hidden");
+    document.getElementById("status").textContent="STATUS: PROGRAM READY";
+    document.getElementById("runbox").scrollIntoView({behavior:"smooth"});
+  }else{
+    f.className="bad";
+    f.textContent="PROGRAM ORDER ERROR — CHECK LINE NUMBERS";
+  }
+}
+
+function buildMemoryGrid(){
+  const grid=document.getElementById("blockgrid");
+  grid.innerHTML="";
+  const total=120;
+  for(let i=0;i<total;i++){
+    const b=document.createElement("div");
+    b.className="memblock";
+    b.dataset.index=i;
+    grid.appendChild(b);
+  }
+}
+
+function runProgram(){
+  const cmd=document.getElementById("run").value.trim().toUpperCase();
+  const rf=document.getElementById("rf");
+  const out=document.getElementById("out");
+  const rebuild=document.getElementById("rebuild");
+  const rebuildStatus=document.getElementById("rebuildStatus");
+  const rebuildProgress=document.getElementById("rebuildProgress");
+
+  if(cmd!=="RUN"){
+    rf.className="bad";
+    rf.textContent="?SYNTAX ERROR";
+    return;
+  }
+
+  document.getElementById("runButton").disabled=true;
+  document.getElementById("run").disabled=true;
+  rf.className="ok";
+  rf.textContent="EXECUTING...";
+  out.classList.add("hidden");
+  out.textContent="";
+  rebuild.classList.remove("hidden");
+  buildMemoryGrid();
+
+  const blocks=[...document.querySelectorAll(".memblock")];
+  const total=blocks.length;
+
+  // Začátek: bloky jsou záměrně rozházené po celé mapě.
+  const occupied=new Set();
+  while(occupied.size<62) occupied.add(Math.floor(Math.random()*total));
+  occupied.forEach(i=>blocks[i].classList.add("active"));
+
+  let step=0;
+  const steps=100;
+  const targetCount=62;
+
+  const timer=setInterval(()=>{
+    step++;
+    const pct=Math.min(100,step);
+
+    // Postupně zhasni rozházené bloky a rozsvěcuj souvislou oblast zleva.
+    const desired=Math.floor(targetCount*pct/100);
+    blocks.forEach((b,i)=>{
+      b.classList.remove("moving");
+      if(i<desired){
+        b.classList.add("active");
+      }else if(pct>8 && i>=desired){
+        // S rostoucím procentem mizí náhodná fragmentace.
+        const threshold=pct/100;
+        if(Math.random()<threshold*0.18) b.classList.remove("active");
+      }
+    });
+
+    // Krátký žlutý "přesouvaný" blok.
+    if(pct<96){
+      const moving=Math.min(total-1,desired+Math.floor(Math.random()*Math.max(1,total-desired)));
+      blocks[moving].classList.add("moving");
+    }
+
+    rebuildProgress.style.width=pct+"%";
+
+    if(pct<25){
+      rebuildStatus.textContent="SCANNING PROGRAM BLOCKS... "+pct+"%";
+    }else if(pct<70){
+      rebuildStatus.textContent="REORDERING MEMORY BLOCKS... "+pct+"%";
+    }else if(pct<100){
+      rebuildStatus.textContent="COMPACTING PROGRAM MEMORY... "+pct+"%";
+    }else{
+      clearInterval(timer);
+      blocks.forEach((b,i)=>{
+        b.classList.remove("moving");
+        b.classList.toggle("active",i<targetCount);
+      });
+      rebuildStatus.textContent="PROGRAM MEMORY RESTORED — 100%";
+      rf.textContent="EXECUTION COMPLETE";
+
+      setTimeout(()=>{
+        const result=dec(FINAL,K);
+        out.classList.remove("hidden");
+        out.textContent="READY.\nRUN\n\nPROGRAM COMPLETE.\n\n"+result+"\n\nREADY.";
+        document.getElementById("status").textContent="STATUS: MISSION COMPLETE";
+      },900);
+    }
+  },85);
+}
+
+renderLessons();
+</script>
+</body>
+</html>
