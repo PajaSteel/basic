@@ -311,6 +311,26 @@ function runProgram(){
  // časový interval posunu bloků.    
   },500);
 }
+// potvrzování enter. 
+  document.addEventListener("keydown", function(e){
+  if(e.key !== "Enter") return;
+
+  const active = document.activeElement;
+
+  // Odpovědi BLOCK 01–16
+  if(active && /^a\d+$/.test(active.id)){
+    e.preventDefault();
+    const n = parseInt(active.id.substring(1), 10);
+    check(n);
+    return;
+  }
+
+  // Příkaz RUN
+  if(active && active.id === "run"){
+    e.preventDefault();
+    runProgram();
+  }
+});
 
 renderLessons();
 </script>
