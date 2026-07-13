@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BASIC CACHE RECOVERY SYSTEM</title>
+<style>
+:root{--bg:#020502;--panel:#071007;--green:#74ff66;--dim:#2e7d28;--text:#d4ffd0;--warn:#ffe66d;--bad:#ff6868}
+*{box-sizing:border-box}
+body{margin:0;background:#010301;color:var(--green);font-family:"Courier New",Consolas,monospace}
+.screen{width:min(1120px,96vw);margin:18px auto;padding:20px;border:2px solid var(--dim);background:radial-gradient(circle at center,#0b170a 0%,#061006 75%,#020402 100%);box-shadow:0 0 30px rgba(116,255,102,.14)}
+header{border-bottom:1px solid var(--dim);padding-bottom:14px;margin-bottom:18px}
+h1{font-size:clamp(22px,4vw,36px);margin:0 0 6px}h2{font-size:20px;margin-top:0}h3{font-size:16px}
+.card{border:1px solid var(--dim);background:rgba(3,8,3,.88);padding:16px;margin:16px 0}
+.hidden{display:none}.muted{color:#9edb97}.ok{color:var(--green)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+pre{white-space:pre-wrap;background:#010401;border-left:3px solid var(--dim);padding:12px;overflow:auto;color:var(--text)}
+input,textarea{width:100%;background:#010401;color:var(--green);border:1px solid var(--dim);padding:10px;font:inherit}
+textarea{min-height:320px;resize:vertical}
+button{background:#0c1d0a;color:var(--green);border:1px solid var(--green);padding:10px 14px;font:inherit;cursor:pointer;margin-top:8px}
+button:hover{background:#12320f}
+.progress{height:16px;border:1px solid var(--dim);background:#010401;margin:12px 0}.progress>div{height:100%;width:0;background:var(--green);transition:width .3s}
+.frag{border:1px dashed var(--dim);padding:8px;margin:6px 0;background:#041004}
+.final{border:1px solid var(--green);padding:18px;background:#010401;white-space:pre-wrap;min-height:130px;font-size:18px}
+.lesson-note{line-height:1.55;color:var(--text)}
+.small{font-size:12px;color:#7fb979}
+</style>
+</head>
+<body>
+<div class="screen">
+<header>
+  <h1>BASIC CACHE RECOVERY SYSTEM</h1>
+  <div class="muted">TRAINING MODE / PROGRAM RECOVERY / FINAL EXECUTION</div>
+  <div id="status" class="warn">STATUS: TRAINING REQUIRED</div>
+</header>
+
+<div class="card">
+  <h2>INSTRUCTIONS</h2>
+  <div class="lesson-note">
+    Nemusíš umět programovat. Každý blok nejprve vysvětlí jeden příkaz nebo princip BASICu.
+    Potom stejný princip použiješ v krátké úloze. Po dokončení všech bloků obnovíš závěrečný program.
+  </div>
+  <div class="progress"><div id="bar"></div></div>
+  <div id="progressText">RECOVERED BLOCKS: 0 / 16</div>
+</div>
+
+<div id="lessons"></div>
+
+<div class="card hidden" id="recovery">
+  <h2>FINAL PROGRAM RECOVERY</h2>
+  <div class="lesson-note">
+    Každý řádek programu má své číslo. Tato čísla určují posloupnost, ve které BASIC jednotlivé příkazy čte a vykonává.
+    Seřaď obnovené řádky podle čísel od nejnižšího k nejvyššímu a vlož je do editoru.
+  </div>
+  <div id="frags"></div>
+  <h3>PROGRAM EDITOR</h3>
+  <textarea id="editor" spellcheck="false" placeholder="Sem vlož správně seřazený program..."></textarea>
+  <button onclick="verifyProgram()">VERIFY PROGRAM</button>
+  <div id="pf"></div>
+</div>
+
+<div class="card hidden" id="runbox">
+  <h2>READY.</h2>
+  <div class="lesson-note">Program je správně sestaven. Zadej poslední příkaz.</div>
+  <input id="run" placeholder="RUN">
+  <button onclick="runProgram()">EXECUTE</button>
+  <div id="rf"></div>
+  <div class="final hidden" id="out"></div>
+</div>
+
+<div class="small">BASIC CACHE RECOVERY SYSTEM — FINAL PLAYER BUILD</div>
+</div>
+
+<script>
+const K=150;
+const AK=241;
+const PK=49;
+const EA=["185.94.9.35.214","198.42","192","203.23","203","49.30","50.21","55.3","56.6","53","58","81.125.37.216.255","32","90.3.63","72.12.44","44.126"];
+const EC=["0.107.165.227.156.87.13.189.6.109.90.144","1.109.167.253.158.81.15.188.8.111.92.149","6.111.169.245.146.85.17.73.10.105.94.153.242.168.132.213.42","3.81.171.249.154.93.19.67.12.107.160.235.244.213.237.190","12.83.173.249.164.83.97.36.103","13.85.175.240.165.45.118.38.14.122.181.155.248.86.153.190.107.111.62.236.158.201.132.208.41.116.94.184.34.221.232.160.47.126.44.102.19.166.137.234","10.87.177.247.160.91.25.74.18.97.166.128","7.89.179.250.168.69.116.42.5.111.184","120.91.181.251.168.71.124.44.4.76.190.152.232.36.239","114.93.167.225.185.80.126.74.24.58.160.239.204.80.245.84","116.94.169.227.169.94.12.48.116.76.189.145","118.67.171.229.163.92.23.50.114.78.161.147.196.51.253.95.17.112.165.246","120.64.173.231.189.94.17.52.112.64.160.149.198.45.255.83.19.118.167.230","122.65.175.233.191.88.19.54.14.66.167.151.200.47.193.69.29.110.160.147.246.140.152.40.24.125","124.66.145.235.185.90.29.56.17.72.182.253.202.54.161.76.100.40.200.246.158.237.144.71.14","126.79.147.237.187.100.31.58.8.78.165.226.160.83.171.39.106.71.164","96.76.149.239.181.102.25.60.18.84.186.249.206.84.162.87.111.65.167.234.199.158.233.47","98.69.151.241.183.96.27.62.29.86.188.251.208.87.160.87.25.79.194.159.201.130.242.61.27","100.70.153.243.175.98.2.116.5.38.219","101.177.155.245.173.108.18.102.108.38.140.155","107.178.157.247.77.110.1.4.5.88.159.236.166.0.196.57.18.77.188.225.167","105.183.159.249.74.107.119.109.112.68.132.255.205.2.165.83.0.33.185.132.162.232.169.48.8.81.190","111.180.129.251.73.106.13.8.25.92.155.240.202","109.189.131.253.64.126.15.101.116.76.158.226","83.190.133.255.69.118.9.12.29.160.151.244.181.8.220.1.5.93.172.224","81.187.135.193.91.103.22.96.12.162.248.242.59.127.221.24.6","87.184.137.195.72.121.37","84.161.139.197.67.124.55.18.30.166.141.250.70.14.215.7.101","90.162.141.199.67.126.49.97.12.198"];
+const EF=["70.148.251.213.83.12.39.98.63.178.224.215.52.28.79.118.50.194.246.156.72.155.74.105.116","74.147.237.177.110.25.85.13.78.165.226.221.54.20.64.25.86","72.149.255.217.111.8.35.102.50.186.249.206.90.98.59.27.81","68.151.241.191.100.27.56.104.64.176.242.220.44.104.43","78.153.243.177.98.5.91.11.84.163.232.198","179.155.229.223.123.22.60.8.86.240.230.165","181.157.247.72.109.117.62.110.70.130.253.195.0.30.81.6.35.183.134.164.70.177.76.24.81.188.134.192.234.149.80.104.119.198.228.46.235.238.193.18","180.157.233.35.97.18.213.112.52.140.255.209.2.113.59.29.79.178.227.180","181.132.235.37.99.28.215.114.55.134.237.218.111.110.54.103.63.179.246.198","184.132.237.39.125.30.209.116.42.140.242.193.6.28.90.15.39.185.239.162.63.198.33.23","185.133.255.69.118.9.167.20.160.151.244.205","191.129.209.43.101.13.192.22.214.140.130.36.17.1.7.118.60","190.137.211.45.101.36.202.30.164.246.244.91.0.12.9.24","162.138.213.47.107.38.217.9.212.254","164.141.199.93.126.49.175.28.168.143.252.54","164.139.217.51.113.34.197.64.196.156.237.33.18.97.11.27.87.152.250.221.12.214.110.98.70.183","163.241.203.89.122.61.179.35.172.139.192.75.20.117.13.30","168.250.221.55.19.46.198.48.193.234.167","169.246.223.57.15.40.195.70.219.154.217.46.8","172.244.193.59.9.42.205.72.220.148.212.57.26.89.19.7.167.154.251.82","174.241.195.61.11.52.207.74.193.154.200.47.28.43.124.27.173.155.142.35.29.54.6.97.87","147.252.197.63.12.61.217","146.251.199.1.7.48.203.78.212.226.209.54.12.47.119.75.222.147.200","144.255.217.109.8.47.245.80.211","150.224.203.5.11.48.238.82.210.238.195.51","155.226.205.7.29.62.241.84.213.232.207.60.22.80.20.73.194.157.204.49.119","147.229.223.110.28.41.232.86.145.251.196","159.229.49.11.28.57.137.51.130.242.214.17.127.84.23.37.210.143.203.82.112.90.119.66.190.131.208","157.237.51.13.16.206.255.53.132.252.206.18"];
+const FINAL="208.137.164.85.114.72.209.46.196.231.155.64.125.28.120.19.211.144.136.144.102.215.21.114.85.172.241.221.244.219.34.28.4.209.158.189.134.210.43.6.111.167.96.186.148";
+let done = Array(16).fill(false);
+
+const lessons = [
+{t:"LESSON 01 — PRINT",d:"PRINT vypíše text nebo hodnotu na obrazovku.",ex:'10 PRINT "HELLO"',q:'Co program vypíše?',code:'10 PRINT "HELLO"'},
+{t:"LESSON 02 — LET",d:"LET uloží hodnotu do proměnné. Proměnnou lze znovu přepočítat.",ex:'10 LET A = 5\n20 LET A = A + 3\n30 PRINT A\n\nVýsledek: 8',q:"Urči výslednou hodnotu A.",code:'10 LET A = 7\n20 LET A = A + 5\n30 LET A = A * 2\n40 PRINT A'},
+{t:"LESSON 03 — INPUT",d:"INPUT načte hodnotu zadanou uživatelem. V této úloze předpokládej zadanou hodnotu 7.",ex:'10 INPUT A\n20 PRINT A\n\nPři zadání 4 program vypíše 4.',q:"Jakou hodnotu vypíše program?",code:'10 INPUT A   [uživatel zadá 7]\n20 PRINT A'},
+{t:"LESSON 04 — IF ... THEN",d:"IF ověří podmínku. Pokud platí, provede se část za THEN.",ex:'10 LET A = 8\n20 LET B = 1\n30 IF A > 5 THEN LET B = 7\n40 PRINT B\n\nVýsledek: 7',q:"Urči výslednou hodnotu B.",code:'10 LET X = 4\n20 LET B = 2\n30 IF X < 10 THEN LET B = B + 11\n40 PRINT B'},
+{t:"LESSON 05 — ELSE",d:"ELSE určuje, co se provede, pokud podmínka IF neplatí.",ex:'10 LET A = 2\n20 IF A > 5 THEN LET B = 9 ELSE LET B = 3\n30 PRINT B\n\nVýsledek: 3',q:"Urči B.",code:'10 LET A = 1\n20 IF A = 5 THEN LET B = 9 ELSE LET B = 6\n30 PRINT B'},
+{t:"LESSON 06 — FOR / NEXT",d:"FOR ... NEXT opakuje příkazy. Proměnná I postupně nabývá hodnot od začátku do konce.",ex:'10 LET A = 0\n20 FOR I = 1 TO 3\n30 LET A = A + 2\n40 NEXT I\n50 PRINT A\n\nVýsledek: 6',q:"Urči C.",code:'10 LET C = 2\n20 FOR I = 1 TO 4\n30 LET C = C + 3\n40 NEXT I\n50 PRINT C'},
+{t:"LESSON 07 — STEP",d:"STEP mění velikost kroku cyklu FOR.",ex:'10 LET A = 0\n20 FOR I = 2 TO 6 STEP 2\n30 LET A = A + I\n40 NEXT I\n\nA = 2 + 4 + 6 = 12',q:"Urči A.",code:'10 LET A = 0\n20 FOR I = 1 TO 5 STEP 2\n30 LET A = A + I\n40 NEXT I\n50 PRINT A'},
+{t:"LESSON 08 — GOTO",d:"GOTO skočí na zadané číslo řádku. Přeskočené řádky se nevykonají.",ex:'10 LET D = 3\n20 GOTO 50\n30 LET D = 99\n50 LET D = D + 4\n60 PRINT D\n\nVýsledek: 7',q:"Urči D.",code:'10 LET D = 5\n20 GOTO 50\n30 LET D = D * 9\n40 PRINT D\n50 LET D = D + 8\n60 PRINT D'},
+{t:"LESSON 09 — DATA / READ",d:"DATA obsahuje připravené hodnoty. READ je načítá zleva doprava.",ex:'10 DATA 4,9,2\n20 READ A,B,C\n30 PRINT A+B+C\n\nVýsledek: 15',q:"Urči E.",code:'10 DATA 8,3,6\n20 READ X,Y,Z\n30 LET E = X * Y - Z\n40 PRINT E'},
+{t:"LESSON 10 — RESTORE",d:"RESTORE vrátí čtení DATA zpět na začátek.",ex:'10 DATA 2,7\n20 READ A\n30 RESTORE\n40 READ B\n\nA=2 a B=2',q:"Urči součet A+B+C.",code:'10 DATA 5,9\n20 READ A,B\n30 RESTORE\n40 READ C\n50 PRINT A+B+C'},
+{t:"LESSON 11 — DIM / POLE",d:"DIM vytvoří pole — několik očíslovaných míst pod jedním názvem.",ex:'10 DIM A(3)\n20 LET A(1)=2\n30 LET A(2)=4\n40 PRINT A(1)+A(2)\n\nVýsledek: 6',q:"Urči A(3).",code:'10 DIM A(3)\n20 LET A(1)=2\n30 LET A(2)=3\n40 LET A(3)=A(1)+A(2)\n50 PRINT A(3)'},
+{t:"LESSON 12 — TEXTOVÁ PROMĚNNÁ $",d:"Proměnná s $ obsahuje text.",ex:'10 LET A$ = "HELLO"\n20 PRINT A$',q:"Co je v A$?",code:'10 LET A$ = "CACHE"\n20 PRINT A$'},
+{t:"LESSON 13 — LEN",d:"LEN vrací počet znaků textu.",ex:'10 LET A$ = "BASIC"\n20 LET L = LEN(A$)\n30 PRINT L\n\nVýsledek: 5',q:"Urči L.",code:'10 LET A$ = "CACHE"\n20 LET L = LEN(A$)\n30 PRINT L'},
+{t:"LESSON 14 — LEFT$",d:"LEFT$(text,n) vezme n znaků zleva.",ex:'LEFT$("PROGRAM",3) = "PRO"',q:"Jaký text vznikne?",code:'10 LET A$ = "BASIC"\n20 LET B$ = LEFT$(A$,3)\n30 PRINT B$'},
+{t:"LESSON 15 — MID$",d:"MID$(text,start,délka) vezme část textu od zadané pozice.",ex:'MID$("PROGRAM",4,3) = "GRA"',q:"Jaký text vznikne?",code:'10 LET A$ = "BASIC"\n20 LET B$ = MID$(A$,3,3)\n30 PRINT B$'},
+{t:"LESSON 16 — GOSUB / RETURN / END",d:"GOSUB skočí do podprogramu. RETURN se vrátí zpět. END program ukončí.",ex:'10 LET F=2\n20 GOSUB 100\n30 PRINT F\n40 END\n100 LET F=F+5\n110 RETURN\n\nVýsledek: 7',q:"Urči výslednou hodnotu F.",code:'10 LET F = 4\n20 GOSUB 100\n30 LET F = F + 1\n40 PRINT F\n50 END\n100 LET F = F * 3\n110 RETURN'}
+];
+
+function dec(s,key){
+  return new TextDecoder().decode(new Uint8Array(s.split(".").map((x,i)=>(parseInt(x,10)^((key+i*29+(i%7)*13)&255)))));
+}
+function renderLessons(){
+  const root=document.getElementById("lessons");
+  lessons.forEach((L,i)=>{
+    const sec=document.createElement("section");
+    sec.className="card"+(i===0?"":" hidden");
+    sec.id="lesson"+(i+1);
+    sec.innerHTML='<h2>'+L.t+'</h2><div class="lesson-note">'+L.d+'</div><h3>PŘÍKLAD</h3><pre>'+L.ex.replace(/</g,"&lt;")+'</pre><h3>BLOCK '+String(i+1).padStart(2,"0")+'</h3><div class="lesson-note">'+L.q+'</div><pre>'+L.code.replace(/</g,"&lt;")+'</pre><input id="a'+(i+1)+'" autocomplete="off"><button onclick="check('+(i+1)+')">VERIFY BLOCK</button><div id="f'+(i+1)+'"></div>';
+    root.appendChild(sec);
+  });
+}
+function check(n){
+  const v=document.getElementById("a"+n).value.trim().toUpperCase();
+  const expected=dec(EA[n-1],AK+(n-1)*3).trim().toUpperCase();
+  const f=document.getElementById("f"+n);
+  if(v===expected){
+    done[n-1]=true;
+    f.className="ok";f.textContent="BLOCK "+String(n).padStart(2,"0")+" RECOVERED — OK";
+    document.getElementById("a"+n).disabled=true;
+    updateProgress();
+    if(n<16) document.getElementById("lesson"+(n+1)).classList.remove("hidden");
+    if(done.every(Boolean)){
+      document.getElementById("recovery").classList.remove("hidden");
+      document.getElementById("status").textContent="STATUS: FINAL PROGRAM RECOVERY";
+      renderFragments();
+      document.getElementById("recovery").scrollIntoView({behavior:"smooth"});
+    }
+  }else{
+    f.className="bad";f.textContent="LOGIC ERROR — TRY AGAIN";
+  }
+}
+function updateProgress(){
+  const c=done.filter(Boolean).length;
+  document.getElementById("bar").style.width=(c/16*100)+"%";
+  document.getElementById("progressText").textContent="RECOVERED BLOCKS: "+c+" / 16";
+}
+function renderFragments(){
+  const box=document.getElementById("frags");box.innerHTML="";
+  EF.forEach((x,i)=>{const d=document.createElement("div");d.className="frag";d.textContent=dec(x,PK+70+i*2);box.appendChild(d);});
+}
+function norm(t){return t.split(/\r?\n/).map(x=>x.trim().replace(/\s+/g," ")).filter(Boolean);}
+function verifyProgram(){
+  const got=norm(document.getElementById("editor").value);
+  const exp=EC.map((x,i)=>dec(x,PK+i*2));
+  const ok=got.length===exp.length && got.every((x,i)=>x.toUpperCase()===exp[i].toUpperCase());
+  const f=document.getElementById("pf");
+  if(ok){
+    f.className="ok";f.textContent="PROGRAM STRUCTURE VALID — READY TO RUN";
+    document.getElementById("runbox").classList.remove("hidden");
+    document.getElementById("status").textContent="STATUS: PROGRAM READY";
+    document.getElementById("runbox").scrollIntoView({behavior:"smooth"});
+  }else{
+    f.className="bad";f.textContent="PROGRAM ORDER ERROR — CHECK LINE NUMBERS";
+  }
+}
+function runProgram(){
+  const cmd=document.getElementById("run").value.trim().toUpperCase();
+  const rf=document.getElementById("rf"),out=document.getElementById("out");
+  if(cmd!=="RUN"){rf.className="bad";rf.textContent="?SYNTAX ERROR";return;}
+  rf.className="ok";rf.textContent="EXECUTING...";
+  out.classList.remove("hidden");
+  out.textContent="";
+  const result=dec(FINAL,K);
+  const lines=["READY.","RUN","","EXECUTING FINAL PROGRAM...","","PROGRAM COMPLETE.","",result,"","READY."];
+  let i=0;
+  const timer=setInterval(()=>{out.textContent+=lines[i]+"\n";i++;if(i>=lines.length){clearInterval(timer);document.getElementById("status").textContent="STATUS: MISSION COMPLETE";}},220);
+}
+renderLessons();
+</script>
+</body>
+</html>
